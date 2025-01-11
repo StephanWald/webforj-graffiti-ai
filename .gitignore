@@ -1,3 +1,4 @@
 /target/
 /.idea/
 /webforj-graffiti-ai/.editorconfig
+/src/main/resources/apikey.txt
