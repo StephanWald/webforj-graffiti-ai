@@ -218,12 +218,6 @@ public class GraffitiAssistant {
         payload.add("attachments", attachmentsArray);
       }
 
-      System.out.println();
-      System.out.println(payload.toString());
-      System.out.println();
-
-      App.msgbox(payload.toString());
-
       try (OutputStream outputStream = connection.getOutputStream()) {
         outputStream.write(payload.toString().getBytes());
         outputStream.flush();
