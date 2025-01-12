@@ -25,8 +25,8 @@ import com.webforj.component.layout.flexlayout.FlexJustifyContent;
 import com.webforj.component.layout.flexlayout.FlexLayout;
 import com.webforj.component.optiondialog.FileChooserFilter;
 import com.webforj.component.optiondialog.FileUploadDialog;
-import com.webforj.component.text.Label;
 import com.webforj.component.toast.Toast;
+import com.webforj.graffiti.model.util.PodLoader;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -41,7 +41,7 @@ import static com.webforj.ImageBase64Encoder.encodeImageToBase64Src;
 public class GraffitiAIPanel {
 
   private final String apiKey;
-  final String assistantId = "asst_aYPu0Q9JNcAm0He9vHbbzCLd";
+  final static String assistantId = "asst_aYPu0Q9JNcAm0He9vHbbzCLd";
   final GraffitiAssistant assistant = new GraffitiAssistant();
 
   private String runId;
@@ -62,6 +62,7 @@ public class GraffitiAIPanel {
   private Consumer<String> onDoneCallback;
   private Dialog debugDialog;
   private Markdown debugMarkdown;
+  private String pendingFile = "";
 
   public GraffitiAIPanel(){
     this.apiKey = getApiKey();
@@ -148,15 +149,6 @@ public class GraffitiAIPanel {
     debugDialog.open();
     String scr = "if (typeof Prism != 'undefined'){Prism.highlightAll();}";
     App.getPage().executeJsAsync(scr);
-
-    //dialog.getContent().add(new Button("Close Dialog").onClick(this::closeDialog));
-
-/*    clearPreview();
-    preview = new Label(lastResponse);
-    previewBox.add(preview);
-
- */
-
   }
 
 
@@ -191,7 +183,7 @@ public class GraffitiAIPanel {
       return;
     }
 
-    // fileId = assistant.uploadFile(apiKey,myfile,"vision");
+    this.pendingFile = myfile;
     if (instructionInput.getText().isBlank())
       instructionInput.setText("Create a form like in the picture.");
 
@@ -222,13 +214,12 @@ public class GraffitiAIPanel {
 
     int retry = 0;
     boolean done_okay=false;
-    while (retry < 1 && !done_okay) {
+    while (retry < 3 && !done_okay) {
       retry++;
-      if (fileId != null) {
-        assistant.sendMessage(apiKey, threadId, commandText, fileId);
-      } else {
-        assistant.sendMessage(apiKey, threadId, commandText);
-      }
+
+      assistant.sendMessage(apiKey, threadId, commandText, this.pendingFile);
+      this.pendingFile="";
+
 
       fileId = null;
 
@@ -261,23 +252,16 @@ public class GraffitiAIPanel {
       lastJson = jsonForm;
       lastResponse = response;
       drawer.close();
-/*
-      if (preview != null) {
-        preview.destroy();
-      }
 
       try {
         PodLoader loader = new PodLoader();
-        preview = loader.fromJson(jsonForm).load();
+        loader.fromJson(jsonForm).load();
         done_okay=true;
       } catch (Exception e) {
-        preview = new Label("<html><h1>Error generating preview: " + e.getMessage() + "</h1><p>" + response + "</p>");
-        commandText = "Please retry. Getting "+e.getMessage();
-        //command.setText(commandText);
+        busyIndicator.setText("Error "+e.getMessage()+" Retrying to generate...");
+        commandText="Please retry. This form produced the following error: "+e.getMessage();
       }
 
-      previewBox.add(preview);
-*/
 
     }
     busyIndicator.setVisible(false);
@@ -307,7 +291,7 @@ public class GraffitiAIPanel {
     return apikey;
   }
 
-  public Component getDrawerButton() {
+  public IconButton getDrawerButton() {
     return drawerButton;
   }
 }

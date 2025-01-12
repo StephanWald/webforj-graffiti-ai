@@ -16,18 +16,11 @@ public class GraffitiAssistant {
 
   public static String getForm(String resp) {
 
-    System.out.println("-----------PREFORM------------------");
-    System.out.println(resp);
-    System.out.println("-----------PREFORM------------------");
-
     if (resp != null && resp.indexOf("```json\n")>0) {
       resp = resp.substring(resp.indexOf("```json\n") + 8);
       resp = resp.substring(0, resp.indexOf("\n```\n"));
     } else return "";
 
-    System.out.println("-----------FORM------------------");
-    System.out.println(resp);
-    System.out.println("-----------FORM------------------");
     return resp;
   }
 
@@ -43,7 +36,6 @@ public class GraffitiAssistant {
 
       // Set the request method to POST
       connection.setRequestMethod("POST");
-      System.out.println("POST "+url.toString());
 
       // Set request headers
       connection.setRequestProperty("Content-Type", "application/json");
@@ -62,7 +54,6 @@ public class GraffitiAssistant {
 
       // Get the response code
       int responseCode = connection.getResponseCode();
-      System.out.println("Create Thread Response Code: " + responseCode);
       if (responseCode == HttpURLConnection.HTTP_OK) {
         // Read the response
         try (BufferedReader reader = new BufferedReader(new InputStreamReader(connection.getInputStream()))) {
@@ -98,7 +89,7 @@ public class GraffitiAssistant {
 
       // Open a connection
       HttpURLConnection connection = (HttpURLConnection) url.openConnection();
-      System.out.println("POST "+url.toString());
+
       // Set the request method to POST
       connection.setRequestMethod("POST");
 
@@ -117,13 +108,11 @@ public class GraffitiAssistant {
         payload.addProperty("additional_instructions", "");
         payload.addProperty("tool_choice", "auto");
         outputStream.write(payload.toString().getBytes());
-        System.out.println(payload.toString());
         outputStream.flush();
       }
 
       // Get the response code
       int responseCode = connection.getResponseCode();
-      System.out.println("Create Run Response Code: " + responseCode);
       if (responseCode == HttpURLConnection.HTTP_OK) {
         // Read the response
         try (BufferedReader reader = new BufferedReader(new InputStreamReader(connection.getInputStream()))) {
@@ -132,7 +121,6 @@ public class GraffitiAssistant {
           while ((line = reader.readLine()) != null) {
             response.append(line);
           }
-          System.out.println(response.toString());
           // Parse the JSON response using Gson
           JsonObject jsonResponse = JsonParser.parseString(response.toString()).getAsJsonObject();
           if (jsonResponse.has("id")) {
@@ -156,7 +144,14 @@ public class GraffitiAssistant {
     this.sendMessage(apiKey, threadId, commandText,null);
   }
 
-  public void sendMessage(String apiKey, String threadId, String messageContent, String fileId) {
+  public void sendMessage(String apiKey, String threadId, String messageContent, String fileAttachment) {
+
+    String fileId=null;
+
+    if (!fileAttachment.isBlank()){
+      fileId = uploadFile(apiKey,fileAttachment,"vision");
+    }
+
     String urlString = "https://api.openai.com/v1/threads/" + threadId + "/messages";
 
     try {
@@ -168,7 +163,6 @@ public class GraffitiAssistant {
 
       // Set the request method to POST
       connection.setRequestMethod("POST");
-      System.out.println("POST "+url.toString());
       // Set request headers
       connection.setRequestProperty("Content-Type", "application/json");
       connection.setRequestProperty("Authorization", "Bearer " + apiKey);
@@ -200,7 +194,6 @@ public class GraffitiAssistant {
       contentArray.add(contentObject);
 
       payload.add("content", contentArray);
-      System.out.println(payload.toString());
 
       try (OutputStream outputStream = connection.getOutputStream()) {
         outputStream.write(payload.toString().getBytes());
@@ -208,7 +201,6 @@ public class GraffitiAssistant {
       }
 
       int responseCode = connection.getResponseCode();
-      System.out.println("Send Message Response Code: " + responseCode);
 
       connection.disconnect();
     } catch (Exception e) {
@@ -222,7 +214,7 @@ public class GraffitiAssistant {
     try {
       // Create a URL object
       URL url = new URL(urlString);
-      System.out.println("GET "+url.toString());
+
       // Open a connection
       HttpURLConnection connection = (HttpURLConnection) url.openConnection();
 
@@ -235,7 +227,7 @@ public class GraffitiAssistant {
       connection.setRequestProperty("OpenAI-Beta", "assistants=v2");
 
       int responseCode = connection.getResponseCode();
-      System.out.println("Get Messages Response Code: " + responseCode);
+
       if (responseCode == HttpURLConnection.HTTP_OK) {
         // Read the response
         try (BufferedReader reader = new BufferedReader(new InputStreamReader(connection.getInputStream()))) {
@@ -245,7 +237,7 @@ public class GraffitiAssistant {
             response.append(line);
           }
           // Parse the JSON response and extract the last message content
-          System.out.println(response.toString());
+
           JsonObject jsonResponse = JsonParser.parseString(response.toString()).getAsJsonObject();
           JsonArray data = jsonResponse.getAsJsonArray("data");
           if (data.size() > 0) {
@@ -356,7 +348,7 @@ public class GraffitiAssistant {
 
       // Get the response code
       int responseCode = connection.getResponseCode();
-      System.out.println("File Upload Response Code: " + responseCode);
+
       if (responseCode == HttpURLConnection.HTTP_OK) {
         // Read the response
         try (BufferedReader reader = new BufferedReader(new InputStreamReader(connection.getInputStream()))) {
