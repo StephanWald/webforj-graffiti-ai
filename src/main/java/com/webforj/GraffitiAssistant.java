@@ -140,16 +140,18 @@ public class GraffitiAssistant {
     return null; // Return null if there is an error or no run ID
   }
 
-  public void sendMessage(String apiKey, String threadId, String commandText) {
-    this.sendMessage(apiKey, threadId, commandText,null);
-  }
+  public void sendMessage(String apiKey, String threadId, String messageContent, String imageAttachment, String fileAttachment) {
 
-  public void sendMessage(String apiKey, String threadId, String messageContent, String fileAttachment) {
+    String imageFileId=null;
 
-    String fileId=null;
+    if (imageAttachment != null && !imageAttachment.isBlank()){
+      imageFileId = uploadFile(apiKey,imageAttachment,"vision");
+    }
 
-    if (!fileAttachment.isBlank()){
-      fileId = uploadFile(apiKey,fileAttachment,"vision");
+    String attachmentFileId=null;
+
+    if (fileAttachment != null && !fileAttachment.isBlank()){
+      attachmentFileId = uploadFile(apiKey,fileAttachment,"assistants");
     }
 
     String urlString = "https://api.openai.com/v1/threads/" + threadId + "/messages";
@@ -176,14 +178,14 @@ public class GraffitiAssistant {
       payload.addProperty("role", "user");
       JsonArray contentArray = new JsonArray();
 
-      if (fileId != null ){
+      if (imageFileId != null) {
         JsonObject fileObject = new JsonObject();
         fileObject.addProperty("type", "image_file");
 
         JsonObject imageFileObject = new JsonObject();
-        imageFileObject.addProperty("file_id", fileId);
+        imageFileObject.addProperty("file_id", imageFileId);
         imageFileObject.addProperty("detail", "auto");
-        fileObject.add("image_file",imageFileObject);
+        fileObject.add("image_file", imageFileObject);
 
         contentArray.add(fileObject);
       }
@@ -194,6 +196,33 @@ public class GraffitiAssistant {
       contentArray.add(contentObject);
 
       payload.add("content", contentArray);
+
+      if (attachmentFileId != null) {
+
+        JsonArray toolsArray = new JsonArray();
+
+        JsonObject attachmentFileToolsObject = new JsonObject();
+        attachmentFileToolsObject.addProperty("type", "file_search");
+        toolsArray.add(attachmentFileToolsObject);
+
+        JsonObject attachmentFile = new JsonObject();
+
+        JsonObject attachmentFileObject = new JsonObject();
+        attachmentFileObject.addProperty("file_id", attachmentFileId);
+        attachmentFileObject.add("tools",toolsArray);
+
+        JsonArray attachmentsArray = new JsonArray();
+        attachmentsArray.add(attachmentFileObject);
+
+
+        payload.add("attachments", attachmentsArray);
+      }
+
+      System.out.println();
+      System.out.println(payload.toString());
+      System.out.println();
+
+      App.msgbox(payload.toString());
 
       try (OutputStream outputStream = connection.getOutputStream()) {
         outputStream.write(payload.toString().getBytes());

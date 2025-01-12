@@ -25,6 +25,7 @@ import com.webforj.component.layout.flexlayout.FlexJustifyContent;
 import com.webforj.component.layout.flexlayout.FlexLayout;
 import com.webforj.component.optiondialog.FileChooserFilter;
 import com.webforj.component.optiondialog.FileUploadDialog;
+import com.webforj.component.text.Label;
 import com.webforj.component.toast.Toast;
 import com.webforj.graffiti.model.util.PodLoader;
 
@@ -54,6 +55,7 @@ public class GraffitiAIPanel {
   private TextArea instructionInput;
   private Button runButton;
   private IconButton imgButton;
+  private IconButton attachButton;
   private IconButton debugButton;
   private IconButton drawerButton;
   private Div previewBox;
@@ -63,6 +65,8 @@ public class GraffitiAIPanel {
   private Dialog debugDialog;
   private Markdown debugMarkdown;
   private String pendingFile = "";
+  private String pendingAttachmentFile = "";
+  private Label attachmentFileName;
 
   public GraffitiAIPanel(){
     this.apiKey = getApiKey();
@@ -92,7 +96,6 @@ public class GraffitiAIPanel {
       instructionInput = new TextArea();
       instructionInput.setPlaceholder("Type instruction, like 'Create an address form.'");
       instructionInput.setLabel("What can I help with?");
-      instructionInput.setText("create a simple hello world form with two fields and a button.");
       instructionInput.setStyle("width","100%");
       instructionInput.setStyle("height","40%");
 
@@ -113,25 +116,35 @@ public class GraffitiAIPanel {
       imgButton = new IconButton(TablerIcon.create("photo"));
       imgButton.setStyle("align-self","center");
       imgButton.addClickListener(this::onImageButtonClick);
+
+      attachButton = new IconButton(TablerIcon.create("paperclip"));
+      attachButton.setStyle("align-self","center");
+      attachButton.addClickListener(this::onAttachButtonClick);
       
       runButton = new Button("Run");
       runButton.setTheme(ButtonTheme.SUCCESS);
       runButton.setSuffixComponent(TablerIcon.create("robot"));
       runButton.addClickListener(this::onRun);
 
-      btnLayout.add(debugButton,imgButton,runButton);
+      btnLayout.add(debugButton,attachButton,imgButton,runButton);
+
+      attachmentFileName = new Label("")
+          .setStyle("font-size","xx-small")
+          .setStyle("margin","10px 0px 0px 0px");
 
       previewBox = new Div()
           .setMaxWidth("66%")
           .setHeight("100px")
           .setStyle("margin-top","20px");
 
-      drawer.add(instructionInput,btnLayout, previewBox);
+      drawer.add(instructionInput,btnLayout, attachmentFileName, previewBox);
 
       drawer.addClassName("drawer");
     }
     return drawer;
   }
+
+
 
   private void onDebugButtonClick(ElementClickEvent<Icon> iconElementClickEvent) {
 
@@ -160,7 +173,51 @@ public class GraffitiAIPanel {
     }
   }
 
+  private void onAttachButtonClick(ElementClickEvent<Icon> iconElementClickEvent) {
+
+    if (!this.pendingAttachmentFile.isBlank()) {
+      this.pendingAttachmentFile="";
+      this.attachmentFileName.setText("");
+      this.attachButton.setStyle("color",null);
+      return;
+    }
+
+    FileUploadDialog dialog = new FileUploadDialog(
+        "Upload a file (.bbj .txt .src .pdf .htm .html .md) for the assistant as an attachment.");
+
+    UploadedFile result = dialog.show();
+
+    if (result==null) return;
+
+    if (!"BBJ TXT SRC PDF HTM HTML MD".contains(result.getClientExtension().toUpperCase())) {
+      Toast.show("Unknown File Type!", Theme.DANGER);
+      result.delete();
+      return;
+    }
+
+    String myfile=null;
+    try {
+      myfile = result.move(System.currentTimeMillis()+result.getSanitizedClientName()).getAbsolutePath();
+    } catch (IOException e) {
+      Toast.show("File upload failed!", Theme.DANGER);
+      return;
+    }
+
+    this.pendingAttachmentFile = myfile;
+    this.attachmentFileName.setText(myfile);
+    this.attachButton.setStyle("color","limegreen");
+
+
+  }
   private void onImageButtonClick(ElementClickEvent<Icon> iconElementClickEvent) {
+
+
+    if (!this.pendingFile.isBlank()) {
+      this.pendingFile="";
+      clearPreview();
+      this.imgButton.setStyle("color",null);
+      return;
+    }
 
     FileUploadDialog dialog = new FileUploadDialog(
         "Upload a picture",
@@ -188,12 +245,19 @@ public class GraffitiAIPanel {
       instructionInput.setText("Create a form like in the picture.");
 
     clearPreview();
+    imgButton.setStyle("color",null);
+
+    attachmentFileName.setText("");
+    attachButton.setStyle("color",null);
 
     preview = new Img()
         .setWidth("100%")
         .setHeight("fit-content")
         .setSrc(encodeImageToBase64Src(myfile));
     previewBox.add(preview);
+
+    this.imgButton.setStyle("color","limegreen");
+
   }
 
   private void onRun(ButtonClickEvent buttonClickEvent) {
@@ -214,12 +278,18 @@ public class GraffitiAIPanel {
 
     int retry = 0;
     boolean done_okay=false;
-    while (retry < 3 && !done_okay) {
+    while (retry < 1 && !done_okay) {
       retry++;
 
-      assistant.sendMessage(apiKey, threadId, commandText, this.pendingFile);
-      this.pendingFile="";
+      assistant.sendMessage(apiKey, threadId, commandText, this.pendingFile , this.pendingAttachmentFile);
 
+      this.pendingFile="";
+      clearPreview();
+      this.imgButton.setStyle("color",null);
+
+      this.pendingAttachmentFile="";
+      this.attachmentFileName.setText("");
+      this.attachButton.setStyle("color",null);
 
       fileId = null;
 
@@ -260,12 +330,14 @@ public class GraffitiAIPanel {
       } catch (Exception e) {
         busyIndicator.setText("Error "+e.getMessage()+" Retrying to generate...");
         commandText="Please retry. This form produced the following error: "+e.getMessage();
+        App.msgbox(e.getMessage().toString());
       }
 
 
     }
     busyIndicator.setVisible(false);
     instructionInput.setText("");
+
     instructionInput.focus();
 
   }
