@@ -1,29 +1,19 @@
 package com.webforj.views;
 
-import com.webforj.App;
-import com.webforj.Application;
-import com.webforj.BusyIndicator;
-import com.webforj.GraffitiAssistant;
-import com.webforj.UploadedFile;
 import com.webforj.component.Component;
 import com.webforj.component.Composite;
 import com.webforj.component.Theme;
 import com.webforj.component.button.Button;
-import com.webforj.component.button.ButtonTheme;
-import com.webforj.component.button.event.ButtonClickEvent;
 import com.webforj.component.field.TextArea;
+import com.webforj.component.html.elements.H2;
 import com.webforj.component.html.elements.H3;
-import com.webforj.component.html.elements.Img;
+import com.webforj.component.layout.flexlayout.FlexContentAlignment;
 import com.webforj.component.layout.flexlayout.FlexDirection;
+import com.webforj.component.layout.flexlayout.FlexJustifyContent;
 import com.webforj.component.layout.flexlayout.FlexLayout;
-import com.webforj.component.optiondialog.OptionDialog;
-import com.webforj.component.text.Label;
+import com.webforj.component.toast.Toast;
 import com.webforj.graffiti.model.util.PodLoader;
 import com.webforj.router.annotation.Route;
-
-import java.io.IOException;
-
-import static com.webforj.ImageBase64Encoder.encodeImageToBase64Src;
 
 @Route("/")
 public class HelloWorldView extends Composite<FlexLayout> {
@@ -32,35 +22,55 @@ public class HelloWorldView extends Composite<FlexLayout> {
   private TextArea command = new TextArea("Enter command:");
   private Button btn = new Button("GO");
   private Button btnImage = new Button("Image");
+
+  private Button btnDrawerOpen;
+
   private TextArea json = new TextArea("JSON");
-  private Component preview;
+  private Component preview = null;
   PodLoader loader = new PodLoader();
 
-  private String runId;
-  private String threadId;
-  private String fileId;
 
-  String apiKey = Application.getApiKey();
-
-  final String assistantId = "asst_aYPu0Q9JNcAm0He9vHbbzCLd";
-
-  GraffitiAssistant assistant = new GraffitiAssistant();
 
 
   public HelloWorldView(){
     self.setDirection(FlexDirection.COLUMN);
-
     self.setStyle("padding", "20px");
 
-    btn.setTheme(ButtonTheme.PRIMARY)
-        .addClickListener(this::go);
+    GraffitiAIPanel aiAssistantPanel = new GraffitiAIPanel();
+    self.add(aiAssistantPanel.getDrawer());
 
-    btnImage.addClickListener(this::addImage);
+    aiAssistantPanel.onGenerate(this::updateForm);
 
-    self.add(command, btnImage,btn, json, new H3("Preview:") {
-    });
+    FlexLayout header = new FlexLayout()
+        .setAlignContent(FlexContentAlignment.CENTER)
+        .setJustifyContent(FlexJustifyContent.CENTER)
+        .setDirection(FlexDirection.ROW)
+        .setStyle("border-bottom","1px solid");
+
+    header.add(new H2("Preview:"),aiAssistantPanel.getDrawerButton());
+
+    self.add(header);
+
   }
 
+  private void updateForm(String json) {
+    if (preview != null) {
+      preview.destroy();
+    }
+
+    try {
+      preview = loader.fromJson(json).load();
+    } catch (Exception e) {
+      e.printStackTrace();
+      Toast.show("Error, cannot display generated result. Please retry.",Theme.WARNING);
+      return;
+    }
+
+    self.add(preview);
+
+
+  }
+/*
   private void addImage(ButtonClickEvent buttonClickEvent) {
       UploadedFile result = OptionDialog.showFileUploadDialog("Upload a file");
 
@@ -161,4 +171,6 @@ public class HelloWorldView extends Composite<FlexLayout> {
     command.setText("");
     command.focus();
   }
+
+ */
 }

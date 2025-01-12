@@ -19,25 +19,7 @@ import com.webforj.component.optiondialog.OptionDialog;
 @StyleSheet("ws://app.css")
 public class Application extends App {
 
-  public static String getApiKey() {
-    String apikey="";
-    try (InputStream inputStream = Application.class.getClassLoader().getResourceAsStream("apikey.txt"); BufferedReader reader = new BufferedReader(new InputStreamReader(inputStream))) {
 
-      if (inputStream == null) {
-        throw new IllegalArgumentException("File not found in classpath: apikey.txt");
-      }
 
-      apikey=reader.lines().collect(Collectors.joining(System.lineSeparator()));
 
-    } catch (IOException e) {
-      throw new RuntimeException(e);
-    }
-
-    if (apikey.isBlank() || apikey.equals("replace this with your apikey")){
-      OptionDialog.showMessageDialog("API Key not set!");
-      throw new RuntimeException(("API Key not set"));
-    }
-
-    return apikey;
-  }
 }

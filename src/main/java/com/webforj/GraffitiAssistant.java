@@ -15,29 +15,20 @@ import com.google.gson.JsonParser;
 public class GraffitiAssistant {
 
   public static String getForm(String resp) {
-    if (resp != null) {
-      resp = resp.substring(resp.indexOf("```json\\n") + 9);
-      resp = resp.substring(0, resp.indexOf("\\n```\\n"));
-      resp = resp.replace("\\n", "");
-      resp = resp.replace("\\\"", "\"");
-    } else return "";
-    return resp;
-  }
 
-  private static String getResponse(String json) {
-    JsonObject jsonResponse = JsonParser.parseString(json).getAsJsonObject();
-    JsonArray data = jsonResponse.getAsJsonArray("data");
-    if (data.size() > 0) {
-      JsonObject lastMessage = data.get(0).getAsJsonObject();
-      JsonArray content = lastMessage.getAsJsonArray("content");
-      for (int i = 0; i < content.size(); i++) {
-        JsonObject contentItem = content.get(i).getAsJsonObject();
-        if (contentItem.has("text")) {
-          return contentItem.getAsJsonObject("text").get("value").toString();
-        }
-      }
-    }
-    return "";
+    System.out.println("-----------PREFORM------------------");
+    System.out.println(resp);
+    System.out.println("-----------PREFORM------------------");
+
+    if (resp != null && resp.indexOf("```json\n")>0) {
+      resp = resp.substring(resp.indexOf("```json\n") + 8);
+      resp = resp.substring(0, resp.indexOf("\n```\n"));
+    } else return "";
+
+    System.out.println("-----------FORM------------------");
+    System.out.println(resp);
+    System.out.println("-----------FORM------------------");
+    return resp;
   }
 
   public String createThread(String apiKey) {
@@ -254,6 +245,7 @@ public class GraffitiAssistant {
             response.append(line);
           }
           // Parse the JSON response and extract the last message content
+          System.out.println(response.toString());
           JsonObject jsonResponse = JsonParser.parseString(response.toString()).getAsJsonObject();
           JsonArray data = jsonResponse.getAsJsonArray("data");
           if (data.size() > 0) {
@@ -262,7 +254,10 @@ public class GraffitiAssistant {
             for (int i = 0; i < content.size(); i++) {
               JsonObject contentItem = content.get(i).getAsJsonObject();
               if (contentItem.has("text")) {
-                return contentItem.getAsJsonObject("text").get("value").toString();
+                String  s = contentItem.getAsJsonObject("text").get("value").toString();
+                s = s.replace("\\n", "\n");
+                s = s.replace("\\\"", "\"");
+                return s;
               }
             }
           }
